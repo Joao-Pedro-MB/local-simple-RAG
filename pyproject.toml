@@ -1,0 +1,51 @@
+[project]
+name = "agentic-rag"
+version = "0.1.0"
+description = "A fully local test project RAG system that answers Questions from my Notes Folder."
+authors = [{ name = "Joao-Pedro-MB", email = "joaopedrobonucci@gmail.com" }]
+requires-python = "==3.13.*"
+dependencies = [
+    "huggingface-hub",
+    "llama-cpp-python==0.3.36",
+    "numpy",
+    "pyyaml>=6.0.3",
+    "torch",
+    "transformers",
+]
+
+[project.scripts]
+rag = "rag.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "rag"
+
+# PyTorch comes from the CPU-only index (ADR 0001): the default PyPI build pulls
+# several gigabytes of CUDA libraries this machine cannot use.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+# llama-cpp-python is published as source only, so installing it compiles llama.cpp.
+# GGML_NATIVE compiles for this CPU's own instruction set (-march=native, which includes
+# AVX-VNNI) to speed up prompt processing. The flag lives here rather than in a shell
+# CMAKE_ARGS because uv keys its built-wheel cache on it; a shell variable could silently
+# reuse a wheel built with other flags. After changing it, force a rebuild with
+# `uv cache clean llama-cpp-python && uv sync --reinstall-package llama-cpp-python`.
+[tool.uv]
+extra-build-variables = { llama-cpp-python = { CMAKE_ARGS = "-DGGML_NATIVE=ON" } }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: loads real models; excluded by default, run with `pytest -m slow`"]
+addopts = "-m 'not slow' --strict-markers"

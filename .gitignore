@@ -1,0 +1,17 @@
+# Python environment and caches
+.venv/
+.scratch/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# The Index is rebuilt from the Notes by `rag index`
+.index/
+
+# Local model files (weights normally live in the Hugging Face cache, outside the repo)
+models/
+*.gguf
+*.safetensors
+
+# Agent worktrees
+.claude/worktrees/
