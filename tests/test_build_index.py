@@ -1,8 +1,8 @@
 import pytest
 
 from fakes import FakeEmbedder, FakeGenerator, FakeImageDescriber, WordTokenizer
-from rag.chunker import FixedWindows, HeadingAwareChunking
-from rag.index import Index
+from rag.documents.chunker import FixedWindows, HeadingAwareChunking
+from rag.indexing.index import Index
 from rag.pipeline import ask, build_index
 
 
@@ -1069,9 +1069,9 @@ def test_incremental_update_produces_identical_search_and_ask_results_to_full_re
     query = "deep retrieval indexing"
     embedder = FakeEmbedder()
     query_vector = embedder.embed_query(query)
-    inc_search = incremental_index.search(query_vector, embedder.model_id, k=5)
-    full_search = full_index.search(query_vector, embedder.model_id, k=5)
-    assert [(c.document, round(s, 5)) for c, s in inc_search] == [(c.document, round(s, 5)) for c, s in full_search]
+    inc_search = incremental_index.search(query, query_vector, embedder.model_id, k=5)
+    full_search = full_index.search(query, query_vector, embedder.model_id, k=5)
+    assert [(item.chunk.document, round(item.score, 5)) for item in inc_search] == [(item.chunk.document, round(item.score, 5)) for item in full_search]
 
     # BM25 keyword rankings must match identically
     inc_kw = incremental_index.keyword_ranking(query)
@@ -1205,8 +1205,8 @@ def test_cli_index_force_flag_accepted(notes, tmp_path, monkeypatch, capsys):
     notes_dir = notes({"note.md": "A note."})
     index_dir = tmp_path / "cli_index"
 
-    monkeypatch.setattr("rag.embedder.BgeSmallEmbedder", FakeEmbedder)
-    monkeypatch.setattr("rag.chunker.BgeTokenizer", WordTokenizer)
+    monkeypatch.setattr("rag.adapters.embedder.BgeSmallEmbedder", FakeEmbedder)
+    monkeypatch.setattr("rag.documents.chunker.BgeTokenizer", WordTokenizer)
     main(["index", "--notes", str(notes_dir), "--index-dir", str(index_dir), "--force"])
     captured = capsys.readouterr().out
     assert "full rebuild forced" in captured

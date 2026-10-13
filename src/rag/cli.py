@@ -53,10 +53,10 @@ def main(argv=None):
 
 def resolve_embedder(model_name_or_id):
     if model_name_or_id in ("bge-small", "BAAI/bge-small-en-v1.5"):
-        from rag.embedder import BgeSmallEmbedder
+        from rag.adapters.embedder import BgeSmallEmbedder
         return BgeSmallEmbedder()
     elif model_name_or_id in ("qwen3", "Qwen/Qwen3-Embedding-0.6B"):
-        from rag.embedder import Qwen3Embedder
+        from rag.adapters.embedder import Qwen3Embedder
         return Qwen3Embedder()
     raise ValueError(f"unknown embedding model {model_name_or_id!r}; choose 'bge-small' or 'qwen3'")
 
@@ -64,14 +64,14 @@ def resolve_embedder(model_name_or_id):
 def run_index(args):
     if not args.notes.is_dir():
         sys.exit(f"rag: no Notes folder at {args.notes}")
-    from rag.chunker import BgeTokenizer, FixedWindows, HeadingAwareChunking
+    from rag.documents.chunker import BgeTokenizer, FixedWindows, HeadingAwareChunking
 
     chunking = HeadingAwareChunking() if args.chunking in ("headings", "heading-aware") else FixedWindows()
     embedder = resolve_embedder(args.embedding_model)
     tokenizer = BgeTokenizer()
     describer = None
     if args.describe_images:
-        from rag.describer import GemmaImageDescriber
+        from rag.adapters.describer import GemmaImageDescriber
 
         describer = GemmaImageDescriber()
     mode_str = " (full rebuild forced)" if getattr(args, "force", False) else ""
@@ -104,8 +104,8 @@ def run_ask(args):
     if not args.index_dir.is_dir():
         sys.exit(f"rag: no Index at {args.index_dir}; build one with `rag index`")
     import json
-    from rag.generator import GemmaGenerator
-    from rag.index import Index
+    from rag.adapters.generator import GemmaGenerator
+    from rag.indexing.index import Index
 
     try:
         metadata_file = args.index_dir / "metadata.json"

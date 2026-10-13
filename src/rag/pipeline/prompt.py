@@ -8,24 +8,6 @@ INSTRUCTIONS = (
 )
 
 
-# Strings Gemma 4's tokenizer turns into control tokens rather than text: every CONTROL and
-# USER_DEFINED token in its vocabulary. The rendered prompt is tokenized with special tokens
-# recognised (that is how the chat template's own <|turn> markers work), so any of these
-# quoted in a Document or the Question would act on the model: <turn|> would end the user's turn
-# early, and <|think|> could switch thinking mode on.
-GEMMA_SPECIAL_TOKENS = (
-    "<pad>", "<eos>", "<bos>", "<unk>", "<mask>",
-    "<|tool>", "<tool|>", "<|think|>", "<|turn>", "<turn|>",
-    "<|image>", "<|audio>", "<|image|>", "<|audio|>", "<image|>", "<audio|>", "<|video|>",
-    "<|tool_call>", "<tool_call|>", "<|tool_response>", "<tool_response|>", '<|"|>',
-    "<|channel>", "<channel|>",
-)
-
-# With thinking on, Gemma writes its reasoning between these before the answer. E2B writes
-# none at all when thinking is off, so finding either one means thinking mode was on.
-GEMMA_THOUGHT_TAGS = ("<|channel>", "<channel|>")
-
-
 @dataclass(frozen=True)
 class Prompt:
     text: str  # exactly what the model reads, after its chat template
@@ -62,13 +44,5 @@ def messages(question, context):
     chunk_texts = "\n\n".join(f"[{item.rank}] {item.chunk.label}\n{item.chunk.text}" for item in context)
     return [
         {"role": "system", "content": INSTRUCTIONS},
-        {"role": "user", "content": plain_text(f"Context:\n\n{chunk_texts}\n\nQuestion: {question}")},
+        {"role": "user", "content": f"Context:\n\n{chunk_texts}\n\nQuestion: {question}"},
     ]
-
-
-def plain_text(text):
-    """Break up every special-token string with a space after its `<`, so the model reads it
-    as the words it is made of: `<|think|>` becomes `< |think|>`."""
-    for token in GEMMA_SPECIAL_TOKENS:
-        text = text.replace(token, "< " + token[1:])
-    return text

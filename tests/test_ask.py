@@ -1,7 +1,7 @@
 import pytest
 
 from fakes import FakeEmbedder, FakeGenerator, FakeImageDescriber, WordTokenizer
-from rag.chunker import HeadingAwareChunking
+from rag.documents.chunker import HeadingAwareChunking
 from rag.pipeline import EmbeddingModelMismatch, ask, build_index
 
 
@@ -183,7 +183,7 @@ def test_cli_ask_detects_embedding_model_from_index_metadata(notes, tmp_path, mo
     build_index(notes_dir, index_dir, FakeEmbedder(model_id="BAAI/bge-small-en-v1.5"), WordTokenizer())
 
     monkeypatch.setattr("rag.cli.resolve_embedder", lambda mid: FakeEmbedder(model_id=mid))
-    monkeypatch.setattr("rag.generator.GemmaGenerator", lambda: FakeGenerator(text="Cats purr."))
+    monkeypatch.setattr("rag.adapters.generator.GemmaGenerator", lambda: FakeGenerator(text="Cats purr."))
 
     main(["ask", "Why do cats purr?", "--index-dir", str(index_dir)])
     captured = capsys.readouterr().out

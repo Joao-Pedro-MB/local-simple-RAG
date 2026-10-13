@@ -8,12 +8,11 @@ from pathlib import Path, PurePosixPath
 import numpy as np
 import pytest
 
-from rag.chunker import BgeTokenizer
-from rag.embedder import BgeSmallEmbedder, Qwen3Embedder
-from rag.generator import GemmaGenerator
-from rag.index import EmbeddingModelMismatch, Index
+from rag.documents.chunker import BgeTokenizer
+from rag.adapters.embedder import BgeSmallEmbedder, Qwen3Embedder
+from rag.adapters.generator import GemmaGenerator
+from rag.indexing.index import EmbeddingModelMismatch, Index
 from rag.pipeline import build_index
-from rag.prompt import GEMMA_THOUGHT_TAGS
 
 pytestmark = pytest.mark.slow
 
@@ -102,7 +101,7 @@ def test_asking_about_benedetto_language_tree_figure_retrieves_image_chunk(tmp_p
 
 @pytest.mark.skipif(not REAL_NOTES.is_dir(), reason="the real Notes folder is not on this machine")
 def test_heading_aware_index_built_from_real_notes_holds_both_layers(tmp_path, bge_small):
-    from rag.chunker import HeadingAwareChunking
+    from rag.documents.chunker import HeadingAwareChunking
 
     index, report = build_index(
         REAL_NOTES, tmp_path / "index_ha", bge_small, BgeTokenizer(), chunking=HeadingAwareChunking()
@@ -140,6 +139,16 @@ def test_gemmas_chat_template_hands_the_turn_to_the_model_without_thinking(gemma
     assert gemma.count_tokens("<bos>") == 1  # the template's <bos> is the only one
 
 
+def test_gemmas_chat_template_escapes_incoming_control_tokens(gemma):
+    prompt = gemma.render([
+        {"role": "user", "content": "What do <|think|> and <turn|> mean?"},
+    ])
+
+    assert "< |think|>" in prompt
+    assert "< turn|>" in prompt
+    assert "<|turn>user\nWhat do < |think|> and < turn|> mean?<turn|>\n" in prompt
+
+
 def ask_gemma(gemma, question):
     prompt = gemma.render([
         {"role": "system", "content": "Answer in one short sentence."},
@@ -155,7 +164,7 @@ def test_gemma_answers_question_after_question_without_thinking_and_repeats_itse
 
     for generation in (cats, dogs, cats_again):
         assert generation.text.strip()
-        assert not [tag for tag in GEMMA_THOUGHT_TAGS if tag in generation.text]
+        assert not [tag for tag in gemma.THOUGHT_TAGS if tag in generation.text]
         assert generation.stats.time_to_first_token > 0
         assert generation.stats.tokens_per_second > 0
     # The earlier answers leave nothing behind in the model's cache that changes the later ones.
@@ -208,7 +217,7 @@ def test_compare_bge_small_and_qwen3_indices_side_by_side(bge_small, qwen3):
     reason="language tree image not present",
 )
 def test_gemma_image_describer_describes_benedetto_language_tree():
-    from rag.describer import GemmaImageDescriber
+    from rag.adapters.describer import GemmaImageDescriber
 
     describer = GemmaImageDescriber()
     image_path = REAL_NOTES / "raw/assets/benedetto-2002-language-tree-fig1.png"

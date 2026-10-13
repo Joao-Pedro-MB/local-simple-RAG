@@ -5,7 +5,7 @@ import zlib
 
 import numpy as np
 
-from rag.generator import Generation, GenerationStats
+from rag.adapters.generator import Generation, GenerationStats
 
 
 class FakeEmbedder:
@@ -55,9 +55,10 @@ class FakeGenerator:
     Its chat template simply writes each message under its role, with no special tokens.
     """
 
-    def __init__(self, text="Cats purr when they are content.", context_window=8192):
+    def __init__(self, text="Cats purr when they are content.", context_window=8192, warnings=None):
         self.text = text
         self.context_window = context_window
+        self.warnings = list(warnings) if warnings is not None else []
         self.calls = []  # one dict per generate(): prompt, temperature, seed, max_tokens
 
     @property
@@ -73,12 +74,11 @@ class FakeGenerator:
 
     def generate(self, prompt, temperature, seed, max_tokens):
         self.calls.append({"prompt": prompt, "temperature": temperature, "seed": seed, "max_tokens": max_tokens})
-        warnings = []
-        from rag.prompt import GEMMA_THOUGHT_TAGS
-
-        if any(tag in self.text for tag in GEMMA_THOUGHT_TAGS):
-            warnings.append("The answer holds thought tags (<|channel>…<channel|>): thinking mode was on by accident.")
-        return Generation(self.text, GenerationStats(prompt_tokens=self.count_tokens(prompt), **FAKE_STATS), warnings=warnings)
+        return Generation(
+            self.text,
+            GenerationStats(prompt_tokens=self.count_tokens(prompt), **FAKE_STATS),
+            warnings=list(self.warnings),
+        )
 
 
 class FakeImageDescriber:

@@ -1,1 +1,66 @@
 """A hand-built, fully local RAG system over the Notes."""
+
+from rag.adapters import (
+    BgeSmallEmbedder,
+    GemmaGenerator,
+    GemmaImageDescriber,
+    Generation,
+    GenerationStats,
+    Qwen3Embedder,
+)
+from rag.documents import (
+    ALL_ADMITTED_EXTENSIONS,
+    BgeTokenizer,
+    Chunk,
+    Document,
+    FixedWindows,
+    Heading,
+    HeadingAwareChunking,
+    RAW_SOURCE,
+    WIKI_PAGE,
+    build_image_document,
+    load_documents,
+    synthesize_image_documents,
+)
+from rag.indexing import (
+    BM25,
+    ContextChunk,
+    DocumentDiff,
+    EmbeddingModelMismatch,
+    Index,
+    IndexStats,
+    RETRIEVAL_MODES,
+)
+from rag.pipeline import Answer, BuildReport, ask, build_index
+
+__all__ = [
+    "ALL_ADMITTED_EXTENSIONS",
+    "Answer",
+    "BM25",
+    "BgeSmallEmbedder",
+    "BgeTokenizer",
+    "BuildReport",
+    "Chunk",
+    "ContextChunk",
+    "Document",
+    "DocumentDiff",
+    "EmbeddingModelMismatch",
+    "FixedWindows",
+    "GemmaGenerator",
+    "GemmaImageDescriber",
+    "Generation",
+    "GenerationStats",
+    "Heading",
+    "HeadingAwareChunking",
+    "Index",
+    "IndexStats",
+    "Qwen3Embedder",
+    "RAW_SOURCE",
+    "RETRIEVAL_MODES",
+    "WIKI_PAGE",
+    "ask",
+    "build_image_document",
+    "build_index",
+    "load_documents",
+    "synthesize_image_documents",
+]

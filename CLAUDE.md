@@ -13,7 +13,10 @@ Read `GLOSSARY.md` before naming anything. Use its terms (Chunk, Context, Citati
 
 ## Layout
 
-- `src/rag/pipeline.py`: `build_index` and `ask`, the two operations the CLI and tests share. Models arrive through ports (Embedder, chunk tokenizer, Generator); pipeline never loads one itself.
+- `src/rag/pipeline/`: `build_index` and `ask`, the two operations the CLI and tests share, and prompt construction. Models arrive through ports (Embedder, chunk tokenizer, Generator); pipeline never loads one itself.
+- `src/rag/adapters/`: concrete model adapters (Embedder, Generator, ImageDescriber).
+- `src/rag/documents/`: corpus loader, image document synthesis, and chunking strategies.
+- `src/rag/indexing/`: Index storage, incremental diffing/updating, vector search, and BM25 search.
 - `tests/fakes.py`: test adapters for those ports.
 - `.scratch/`: gitignored working notes (`stage-1-classic-rag/spec.md`, issues, ADRs, `docs/agents/`).
 

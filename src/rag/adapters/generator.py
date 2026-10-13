@@ -39,6 +39,41 @@ class GemmaGenerator:
     # temperature 0; at 0 the likeliest token is always taken.
     TOP_K, TOP_P = 64, 0.95
 
+    # Strings Gemma 4's tokenizer turns into control tokens rather than text: every CONTROL and
+    # USER_DEFINED token in its vocabulary. The rendered prompt is tokenized with special tokens
+    # recognised (that is how the chat template's own <|turn> markers work), so any of these
+    # quoted in a Document or the Question would act on the model: <turn|> would end the user's turn
+    # early, and <|think|> could switch thinking mode on.
+    SPECIAL_TOKENS = (
+        "<pad>", "<eos>", "<bos>", "<unk>", "<mask>",
+        "<|tool>", "<tool|>", "<|think|>", "<|turn>", "<turn|>",
+        "<|image>", "<|audio>", "<|image|>", "<|audio|>", "<image|>", "<audio|>", "<|video|>",
+        "<|tool_call>", "<tool_call|>", "<|tool_response>", "<tool_response|>", '<|"|>',
+        "<|channel>", "<channel|>",
+    )
+
+    # With thinking on, Gemma writes its reasoning between these before the answer. E2B writes
+    # none at all when thinking is off, so finding either one means thinking mode was on.
+    THOUGHT_TAGS = ("<|channel>", "<channel|>")
+
+    @classmethod
+    def escape(cls, text):
+        """Break up every special-token string with a space after its `<`, so the model reads it
+        as the words it is made of: `<|think|>` becomes `< |think|>`."""
+        for token in cls.SPECIAL_TOKENS:
+            text = text.replace(token, "< " + token[1:])
+        return text
+
+    @classmethod
+    def filter_thought_tags(cls, text):
+        """Filter out thinking-mode tags from generated text and return (clean_text, warnings)."""
+        warnings = []
+        if any(tag in text for tag in cls.THOUGHT_TAGS):
+            warnings.append("The answer holds thought tags (<|channel>…<channel|>): thinking mode was on by accident.")
+            for tag in cls.THOUGHT_TAGS:
+                text = text.replace(tag, "")
+        return text, warnings
+
     def __init__(self, context_window=8192):
         # Imported here, not at the top, so code that never runs Gemma stays fast.
         import llama_cpp
@@ -61,9 +96,13 @@ class GemmaGenerator:
         return len(self._tokenize(text))
 
     def render(self, messages):
+        escaped_messages = [
+            {**msg, "content": self.escape(msg["content"])} if "content" in msg and isinstance(msg["content"], str) else msg
+            for msg in messages
+        ]
         # Thinking mode is on only when the template is asked for it, which puts <|think|> at the
         # start of the system prompt. Off is the template's default; said here so it is visible.
-        return self._template(messages=messages, enable_thinking=False).prompt
+        return self._template(messages=escaped_messages, enable_thinking=False).prompt
 
     def generate(self, prompt, temperature, seed, max_tokens):
         llama_cpp, llm = self._llama_cpp, self._llm
@@ -98,12 +137,8 @@ class GemmaGenerator:
         perf = llama_cpp.llama_perf_context(llm.ctx)
         tokens_per_second = perf.n_eval / (perf.t_eval_ms / 1000) if perf.t_eval_ms else 0.0
         stats = GenerationStats(len(tokens), (first_token_at or time.perf_counter()) - started, tokens_per_second)
-        text = "".join(pieces)
-        warnings = []
-        from rag.prompt import GEMMA_THOUGHT_TAGS
-
-        if any(tag in text for tag in GEMMA_THOUGHT_TAGS):
-            warnings.append("The answer holds thought tags (<|channel>…<channel|>): thinking mode was on by accident.")
+        raw_text = "".join(pieces)
+        text, warnings = self.filter_thought_tags(raw_text)
         return Generation(text, stats, warnings=warnings)
 
     def _tokenize(self, text):

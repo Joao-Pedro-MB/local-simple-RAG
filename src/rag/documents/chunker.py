@@ -7,7 +7,7 @@ every token. Counting spans measures a Chunk; slicing the text by them cuts one.
 from dataclasses import dataclass
 from pathlib import Path
 
-from rag.corpus import IMAGE_EXTENSIONS
+from rag.documents.corpus import IMAGE_EXTENSIONS
 
 
 @dataclass(frozen=True)
